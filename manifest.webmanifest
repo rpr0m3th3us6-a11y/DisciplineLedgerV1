@@ -2,7 +2,7 @@
   "name": "Discipline Ledger",
   "short_name": "Ledger",
   "description": "Daily habit tracker with streaks and CBT-based motivation pushes. Works offline.",
-  "id": "./",
+  "id": "/DisciplineLedgerV1/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

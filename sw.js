@@ -1,6 +1,6 @@
 /* Discipline Ledger service worker: precache the app shell, serve cache-first.
    Bump CACHE_VERSION on every deploy so installed copies pick up changes. */
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE = "discipline-ledger-" + CACHE_VERSION;
 
 const PRECACHE = [
