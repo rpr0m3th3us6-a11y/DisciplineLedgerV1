@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Discipline Ledger</title>
+<meta name="description" content="Daily habit tracker with streaks and CBT-based motivation pushes. Works offline.">
+<meta name="theme-color" content="#4a5637">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  @font-face{font-family:'Space Mono';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/space-mono-latin-400-normal.woff2) format('woff2');}
+  @font-face{font-family:'Space Mono';font-weight:700;font-style:normal;font-display:swap;src:url(fonts/space-mono-latin-700-normal.woff2) format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/public-sans-latin-400-normal.woff2) format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:500;font-style:normal;font-display:swap;src:url(fonts/public-sans-latin-500-normal.woff2) format('woff2');}
+  @font-face{font-family:'Public Sans';font-weight:600;font-style:normal;font-display:swap;src:url(fonts/public-sans-latin-600-normal.woff2) format('woff2');}
+  @font-face{font-family:'Fraunces';font-weight:500;font-style:normal;font-display:swap;src:url(fonts/fraunces-latin-500-normal.woff2) format('woff2');}
+  @font-face{font-family:'Fraunces';font-weight:500;font-style:italic;font-display:swap;src:url(fonts/fraunces-latin-500-italic.woff2) format('woff2');}
+
+  :root{
+    --bg:#f3f1ea;
+    --surface:#ffffff;
+    --surface-2:#eae6d9;
+    --border:#d8d2c0;
+    --ink:#1c1e1a;
+    --ink-dim:#5c5f56;
+    --accent:#6b7a4f;
+    --accent-strong:#4a5637;
+    --accent-ink:#f3f1ea;
+    --danger:#a5453a;
+    --gold:#8a6d2b;
+    --shadow:0 1px 2px rgba(28,30,26,0.06);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#15170f;
+      --surface:#1e2117;
+      --surface-2:#262a1d;
+      --border:#3a3e2c;
+      --ink:#e9e7da;
+      --ink-dim:#a3a693;
+      --accent:#8fa564;
+      --accent-strong:#a9c17c;
+      --accent-ink:#151710;
+      --danger:#d97a6c;
+      --gold:#cfa956;
+      --shadow:0 1px 3px rgba(0,0,0,0.4);
+      color-scheme:dark;
+    }
+  }
+
+  *{box-sizing:border-box;}
+  html{background:var(--bg);}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    padding-top:calc(24px + env(safe-area-inset-top, 0px));
+    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-left:max(16px, env(safe-area-inset-left, 0px));
+    padding-right:max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
+
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;
+    border-bottom:2px solid var(--ink);padding-bottom:14px;}
+  .masthead h1{
+    font-family:'Space Mono', 'Courier New', monospace;
+    font-size:clamp(22px,5vw,30px);
+    letter-spacing:0.02em;
+    margin:0;
+    text-transform:uppercase;
+    text-wrap:balance;
+  }
+  .masthead .sub{font-size:12px;color:var(--ink-dim);font-family:'Space Mono','Courier New',monospace;letter-spacing:0.06em;text-transform:uppercase;}
+  .date-badge{
+    font-family:'Space Mono','Courier New',monospace;
+    font-size:12px;
+    color:var(--ink-dim);
+    text-align:right;
+    line-height:1.5;
+  }
+  .date-badge b{color:var(--ink);font-size:14px;display:block;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .stat{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:2px;
+    padding:12px 14px;
+    box-shadow:var(--shadow);
+  }
+  .stat .label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-dim);font-family:'Space Mono','Courier New',monospace;}
+  .stat .value{font-family:'Space Mono','Courier New',monospace;font-size:26px;font-variant-numeric:tabular-nums;margin-top:2px;color:var(--accent-strong);}
+
+  section.card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:3px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .card-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:12px 16px;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--border);
+  }
+  .card-head h2{
+    font-family:'Space Mono','Courier New',monospace;
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    margin:0;
+    color:var(--ink-dim);
+  }
+  .card-head .hint{font-size:11px;color:var(--ink-dim);}
+
+  .habit-list{display:flex;flex-direction:column;}
+  .habit{
+    display:flex;align-items:center;gap:12px;
+    padding:8px 16px;
+    min-height:52px;
+    border-bottom:1px solid var(--border);
+  }
+  .habit:last-child{border-bottom:none;}
+  .habit .check{
+    flex:0 0 auto;
+    width:32px;height:32px;
+    border:2px solid var(--ink-dim);
+    border-radius:2px;
+    background:transparent;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--accent-ink);
+    font-size:17px;
+    transition:background .12s, border-color .12s;
+  }
+  .habit .check[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);}
+  .habit .name{flex:1 1 auto;font-size:14.5px;overflow-wrap:anywhere;}
+  .habit .name.done{color:var(--ink-dim);text-decoration:line-through;text-decoration-color:var(--border);}
+  .habit .streak{
+    font-family:'Space Mono','Courier New',monospace;
+    font-size:12px;
+    color:var(--gold);
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  .habit .del{
+    flex:0 0 auto;background:none;border:none;color:var(--ink-dim);cursor:pointer;font-size:20px;line-height:1;padding:8px;
+  }
+  .habit .del:hover{color:var(--danger);}
+  .empty{padding:18px 16px;font-size:13px;color:var(--ink-dim);}
+
+  button:focus-visible, input:focus-visible, label.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .add-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);}
+  .add-row input{
+    flex:1 1 auto;
+    min-width:0;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:2px;
+    color:var(--ink);
+    padding:10px;
+    font-size:16px;
+    font-family:inherit;
+  }
+  .btn, .add-row button{
+    background:var(--accent-strong);
+    color:var(--accent-ink);
+    border:none;
+    border-radius:2px;
+    padding:10px 16px;
+    font-size:13px;
+    font-family:'Space Mono','Courier New',monospace;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .btn:hover, .add-row button:hover{background:var(--accent);}
+  .btn.ghost{background:none;color:var(--ink-dim);border:1px solid var(--border);}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent-strong);background:none;}
+  .btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+  .push{padding:20px 16px 22px;display:flex;flex-direction:column;gap:10px;}
+  .push .quote{
+    font-family:'Fraunces', Georgia, serif;
+    font-size:19px;
+    line-height:1.4;
+    text-wrap:balance;
+  }
+  .push .attr{font-size:12px;color:var(--ink-dim);font-family:'Space Mono','Courier New',monospace;}
+  .push .tool{
+    margin-top:6px;
+    font-size:13px;
+    color:var(--ink-dim);
+    border-left:2px solid var(--accent);
+    padding-left:10px;
+  }
+  .push .tool b{color:var(--ink);}
+  .push-actions{display:flex;gap:8px;}
+
+  .log{padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+  .log-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-family:'Space Mono','Courier New',monospace;}
+  .log-row .day{color:var(--ink-dim);width:44px;}
+  .bar-track{flex:1 1 auto;height:8px;background:var(--surface-2);border-radius:4px;margin:0 10px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--accent);}
+  .log-row .pct{width:40px;text-align:right;color:var(--ink-dim);font-variant-numeric:tabular-nums;}
+
+  .backup{padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+  .backup .row{display:flex;gap:8px;flex-wrap:wrap;}
+  .backup input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+  .backup p{margin:0;font-size:12.5px;color:var(--ink-dim);line-height:1.5;}
+  #status{min-height:1.2em;font-size:12.5px;font-family:'Space Mono','Courier New',monospace;color:var(--accent-strong);}
+  #status.err{color:var(--danger);}
+
+  footer.note{font-size:11.5px;color:var(--ink-dim);text-align:center;padding-top:4px;display:flex;flex-direction:column;gap:4px;}
+  #offlineState::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ink-dim);margin-right:6px;}
+  #offlineState.ready::before{background:var(--accent);}
+
+  @media (prefers-reduced-motion: reduce){ .habit .check{transition:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <h1>Discipline Ledger</h1>
+      <div class="sub">Rowan Risk Solutions // daily ops log</div>
+    </div>
+    <div class="date-badge"><span id="dateLabel">—</span><b id="streakLabel">—</b></div>
+  </header>
+
+  <div class="stat-row">
+    <div class="stat"><div class="label">Today</div><div class="value" id="statToday">0/0</div></div>
+    <div class="stat"><div class="label">Current streak</div><div class="value" id="statStreak">0</div></div>
+    <div class="stat"><div class="label">Best streak</div><div class="value" id="statBest">0</div></div>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>Daily discipline</h2><span class="hint" id="progressHint">0%</span></div>
+    <div class="habit-list" id="habitList"></div>
+    <div class="add-row">
+      <input type="text" id="newHabit" placeholder="Add a habit (e.g. dry-fire reps)" maxlength="60" autocomplete="off" aria-label="New habit name">
+      <button id="addBtn" type="button">Add</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Push</h2><span class="hint">CBT-based</span></div>
+    <div class="push">
+      <div class="quote" id="quoteText">Loading.</div>
+      <div class="attr" id="quoteAttr"></div>
+      <div class="tool" id="toolText"></div>
+      <div class="push-actions">
+        <button class="btn ghost" id="nextPush" type="button">Next one</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Last 7 days</h2></div>
+    <div class="log" id="logList"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Backup</h2><span class="hint" id="lastBackup">never exported</span></div>
+    <div class="backup">
+      <p>Everything lives in this browser on this device. Export a copy now and then. Import restores it, or moves it to another device.</p>
+      <div class="row">
+        <button class="btn" id="exportBtn" type="button">Export JSON</button>
+        <label class="btn ghost" for="importFile">Import JSON</label>
+        <input type="file" id="importFile" accept="application/json,.json">
+      </div>
+      <div id="status" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <footer class="note">
+    <span id="offlineState">Checking offline support</span>
+    <span>No account, no tracking. Data never leaves your device.</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORE_KEY = "discipline_ledger_v1";
+  var BACKUP_KEY = "discipline_ledger_last_export";
+
+  var DEFAULT_HABITS = [
+    "Dry-fire / range reps",
+    "PT block",
+    "Deep work block (RRS / client work)",
+    "No mindless scrolling before noon"
+  ];
+
+  var CONTENT = [
+    { q:"Discipline is choosing between what you want now and what you want most.", a:"Abraham Lincoln (attributed)", tool:"Behavioral activation: do the smallest version of the task right now. Don't wait to feel like it." },
+    { q:"You do not rise to the level of your goals. You fall to the level of your systems.", a:"James Clear", tool:"If-then plan: decide the trigger and the action in advance, so the decision is already made when the moment comes." },
+    { q:"Between stimulus and response there is a space. In that space is our power to choose our response.", a:"Viktor Frankl (attributed)", tool:"Thought record: name the automatic thought, check it for all-or-nothing framing, then choose the next action anyway." },
+    { q:"Motivation is what gets you started. Habit is what keeps you going.", a:"Jim Ryun", tool:"Graded exposure: break the task into a ladder and only move up a rung once the current one feels easy." },
+    { q:"We are what we repeatedly do. Excellence, then, is not an act, but a habit.", a:"Will Durant, summarizing Aristotle", tool:"Values check: ask if you're avoiding this because of your mood right now, or because it's genuinely not worth doing." },
+    { q:"The pain of discipline weighs ounces. The pain of regret weighs tons.", a:"Jim Rohn (attributed)", tool:"Implementation intention: \"If it's 0600, then I train before I check my phone.\" Write the exact line down." },
+    { q:"You don't have to see the whole staircase, just take the first step.", a:"Martin Luther King Jr. (attributed)", tool:"Five-minute rule: commit to five minutes only. Most resistance dissolves once you're moving." },
+    { q:"Amateurs sit and wait for inspiration. The rest of us just get up and go to work.", a:"Stephen King, On Writing", tool:"Behavioral activation: schedule the action at a fixed time regardless of mood, then log whether mood followed." },
+    { q:"Fatigue makes cowards of us all.", a:"Vince Lombardi", tool:"Cognitive distortion check: is this unbearable, or just uncomfortable? Discomfort is data, not a stop sign." },
+    { q:"Suffering is optional. The intensity of your practice reveals your character.", a:"Common saying, author unknown", tool:"Externalize the thought: write down the excuse. Excuses examined on paper lose most of their force." }
+  ];
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function keyFor(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
+  function todayKey(){ return keyFor(new Date()); }
+
+  function freshState(){
+    return { habits: DEFAULT_HABITS.map(function(n,i){ return {id:"h"+Date.now()+"_"+i, name:n}; }), log:{}, bestStreak:0 };
+  }
+
+  function valid(s){
+    if(!s || typeof s !== "object") return false;
+    if(!Array.isArray(s.habits) || !s.log || typeof s.log !== "object" || Array.isArray(s.log)) return false;
+    for(var i=0;i<s.habits.length;i++){
+      var h = s.habits[i];
+      if(!h || typeof h.id !== "string" || typeof h.name !== "string") return false;
+    }
+    return true;
+  }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(raw){ var p = JSON.parse(raw); if(valid(p)) return p; }
+    }catch(e){}
+    return freshState();
+  }
+
+  var persistFailed = false;
+  function save(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); persistFailed = false; }
+    catch(e){ persistFailed = true; setStatus("Could not save. Browser storage is blocked or full.", true); }
+  }
+
+  var state = load();
+  if(typeof state.bestStreak !== "number") state.bestStreak = 0;
+
+  var el = function(id){ return document.getElementById(id); };
+  var dateLabel = el("dateLabel"), streakLabel = el("streakLabel"), statToday = el("statToday"),
+      statStreak = el("statStreak"), statBest = el("statBest"), progressHint = el("progressHint"),
+      habitList = el("habitList"), logList = el("logList"), newHabitInput = el("newHabit"),
+      statusEl = el("status");
+
+  function setStatus(msg, isErr){
+    statusEl.textContent = msg;
+    statusEl.className = isErr ? "err" : "";
+  }
+
+  function todaysDone(){ return state.log[todayKey()] || {}; }
+
+  function setDone(habitId, val){
+    var key = todayKey();
+    if(!state.log[key]) state.log[key] = {};
+    if(val) state.log[key][habitId] = true; else delete state.log[key][habitId];
+    save();
+    render();
+  }
+
+  function habitStreak(habitId){
+    var streak = 0, d = new Date();
+    while(true){
+      var key = keyFor(d), day = state.log[key];
+      if(day && day[habitId]){ streak++; }
+      else if(key !== todayKey()){ break; }
+      d.setDate(d.getDate()-1);
+    }
+    return streak;
+  }
+
+  function overallStreak(){
+    var streak = 0, d = new Date();
+    while(true){
+      var key = keyFor(d), day = state.log[key] || {}, total = state.habits.length;
+      var done = state.habits.filter(function(h){ return day[h.id]; }).length;
+      if(total > 0 && done === total){ streak++; }
+      else if(key !== todayKey()){ break; }
+      d.setDate(d.getDate()-1);
+    }
+    if(streak > state.bestStreak){ state.bestStreak = streak; save(); }
+    return streak;
+  }
+
+  function renderHabits(){
+    habitList.textContent = "";
+    if(!state.habits.length){
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No habits yet. Add one below.";
+      habitList.appendChild(empty);
+      return;
+    }
+    var done = todaysDone();
+    state.habits.forEach(function(h){
+      var row = document.createElement("div");
+      row.className = "habit";
+
+      var isDone = !!done[h.id];
+      var check = document.createElement("button");
+      check.type = "button";
+      check.className = "check";
+      check.setAttribute("aria-pressed", isDone ? "true" : "false");
+      check.setAttribute("aria-label", (isDone ? "Mark not done: " : "Mark done: ") + h.name);
+      check.textContent = isDone ? "✓" : "";
+      check.addEventListener("click", function(){ setDone(h.id, !isDone); });
+
+      var name = document.createElement("div");
+      name.className = "name" + (isDone ? " done" : "");
+      name.textContent = h.name;
+
+      var streak = document.createElement("div");
+      var s = habitStreak(h.id);
+      streak.className = "streak";
+      streak.textContent = s > 0 ? (s + "d streak") : "—";
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "del";
+      del.setAttribute("aria-label", "Remove habit: " + h.name);
+      del.textContent = "×";
+      del.addEventListener("click", function(){
+        state.habits = state.habits.filter(function(x){ return x.id !== h.id; });
+        save();
+        render();
+        setStatus("Removed \"" + h.name + "\". Past logs for it are kept in the export.");
+      });
+
+      row.appendChild(check); row.appendChild(name); row.appendChild(streak); row.appendChild(del);
+      habitList.appendChild(row);
+    });
+  }
+
+  function renderStats(){
+    var done = todaysDone(), total = state.habits.length;
+    var doneCount = state.habits.filter(function(h){ return done[h.id]; }).length;
+    statToday.textContent = doneCount + "/" + total;
+    progressHint.textContent = (total ? Math.round((doneCount/total)*100) : 0) + "%";
+    var streak = overallStreak();
+    statStreak.textContent = streak;
+    statBest.textContent = state.bestStreak;
+    streakLabel.textContent = streak > 0 ? (streak + "-day streak") : "no streak yet";
+    dateLabel.textContent = new Date().toLocaleDateString(undefined, { weekday:"long", month:"short", day:"numeric" });
+  }
+
+  function renderLog(){
+    logList.textContent = "";
+    var now = new Date();
+    for(var i=0;i<7;i++){
+      var dd = new Date(now); dd.setDate(now.getDate()-i);
+      var day = state.log[keyFor(dd)] || {}, total = state.habits.length;
+      var done = state.habits.filter(function(h){ return day[h.id]; }).length;
+      var pct = total ? Math.round((done/total)*100) : 0;
+
+      var row = document.createElement("div"); row.className = "log-row";
+      var label = document.createElement("div"); label.className = "day";
+      label.textContent = i === 0 ? "Today" : dd.toLocaleDateString(undefined,{weekday:"short"});
+      var track = document.createElement("div"); track.className = "bar-track";
+      var fill = document.createElement("div"); fill.className = "bar-fill"; fill.style.width = pct + "%";
+      track.appendChild(fill);
+      var pctLabel = document.createElement("div"); pctLabel.className = "pct"; pctLabel.textContent = pct + "%";
+      row.appendChild(label); row.appendChild(track); row.appendChild(pctLabel);
+      logList.appendChild(row);
+    }
+  }
+
+  function render(){ renderHabits(); renderStats(); renderLog(); }
+
+  function addHabit(){
+    var val = newHabitInput.value.trim();
+    if(!val) return;
+    state.habits.push({ id:"h"+Date.now(), name:val });
+    newHabitInput.value = "";
+    save(); render();
+  }
+  el("addBtn").addEventListener("click", addHabit);
+  newHabitInput.addEventListener("keydown", function(e){ if(e.key === "Enter") addHabit(); });
+
+  /* Push card */
+  var pushIndex;
+  function showPush(idx){
+    var item = CONTENT[idx % CONTENT.length];
+    el("quoteText").textContent = "“" + item.q + "”";
+    el("quoteAttr").textContent = "— " + item.a;
+    var t = el("toolText"); t.textContent = "";
+    var b = document.createElement("b"); b.textContent = "Try: ";
+    t.appendChild(b); t.appendChild(document.createTextNode(item.tool));
+  }
+  var now0 = new Date();
+  var dayOfYear = Math.floor((now0 - new Date(now0.getFullYear(),0,0)) / 86400000);
+  pushIndex = (dayOfYear * 2 + (now0.getHours() >= 14 ? 1 : 0)) % CONTENT.length;
+  showPush(pushIndex);
+  el("nextPush").addEventListener("click", function(){ pushIndex = (pushIndex + 1) % CONTENT.length; showPush(pushIndex); });
+
+  /* Backup */
+  function refreshBackupLabel(){
+    var t = null;
+    try{ t = localStorage.getItem(BACKUP_KEY); }catch(e){}
+    el("lastBackup").textContent = t ? ("exported " + new Date(t).toLocaleDateString()) : "never exported";
+  }
+
+  el("exportBtn").addEventListener("click", function(){
+    try{
+      var payload = { app:"discipline-ledger", version:1, exportedAt:new Date().toISOString(), data:state };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "discipline-ledger-" + todayKey() + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      try{ localStorage.setItem(BACKUP_KEY, new Date().toISOString()); }catch(e){}
+      refreshBackupLabel();
+      setStatus("Exported. Check your Downloads folder.");
+    }catch(e){ setStatus("Export failed: " + e.message, true); }
+  });
+
+  el("importFile").addEventListener("change", function(ev){
+    var f = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if(!f) return;
+    var r = new FileReader();
+    r.onerror = function(){ setStatus("Could not read that file.", true); };
+    r.onload = function(){
+      try{
+        var parsed = JSON.parse(String(r.result));
+        var data = parsed && parsed.app === "discipline-ledger" ? parsed.data : parsed;
+        if(!valid(data)) throw new Error("not a Discipline Ledger export");
+        state = data;
+        if(typeof state.bestStreak !== "number") state.bestStreak = 0;
+        save(); render();
+        setStatus("Imported " + state.habits.length + " habits and " + Object.keys(state.log).length + " logged days.");
+      }catch(e){ setStatus("Import failed: " + e.message + ". Nothing was changed.", true); }
+    };
+    r.readAsText(f);
+  });
+  refreshBackupLabel();
+
+  /* Keep the day correct when the installed app resumes after midnight */
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) render(); });
+  window.addEventListener("focus", render);
+
+  /* Ask the browser not to evict our data */
+  try{ if(navigator.storage && navigator.storage.persist){ navigator.storage.persist(); } }catch(e){}
+
+  /* Offline support */
+  var offlineEl = el("offlineState");
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").then(function(){ return navigator.serviceWorker.ready; })
+        .then(function(){ offlineEl.textContent = "Offline ready"; offlineEl.className = "ready"; })
+        .catch(function(){ offlineEl.textContent = "Offline unavailable in this browser"; });
+    });
+  } else {
+    offlineEl.textContent = "Offline unavailable in this browser";
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
